@@ -8,12 +8,32 @@ enum ExpenseCategory {
   props('props', 'Atrezzo / Café', Icons.coffee_outlined),
   equipment('equipment', 'Equipo', Icons.videocam_outlined),
   travel('travel', 'Desplazamiento', Icons.directions_car_outlined),
+  food(
+    'food',
+    'Comida / Súper',
+    Icons.shopping_basket_outlined,
+    personal: true,
+  ),
+  home('home', 'Casa', Icons.home_outlined, personal: true),
+  leisure('leisure', 'Ocio', Icons.local_activity_outlined, personal: true),
   other('other', 'Otros', Icons.receipt_long_outlined);
 
-  const ExpenseCategory(this.db, this.label, this.icon);
+  const ExpenseCategory(
+    this.db,
+    this.label,
+    this.icon, {
+    this.personal = false,
+  });
   final String db;
   final String label;
   final IconData icon;
+
+  /// Categoría propia del día a día (no profesional).
+  final bool personal;
+
+  /// Categorías que se ofrecen al registrar un gasto profesional o personal.
+  static List<ExpenseCategory> forPersonal(bool personal) =>
+      values.where((c) => c == other || c.personal == personal).toList();
 
   static ExpenseCategory fromDb(String v) =>
       values.firstWhere((e) => e.db == v, orElse: () => other);
@@ -49,6 +69,12 @@ class Expense {
       amount * deductiblePct / 100 * vatRate / (1 + vatRate);
 
   double get deductibleAmount => amount * deductiblePct / 100;
+
+  /// Parte que no desgrava: sale de la hucha pero no cuenta para IVA ni IRPF.
+  double get nonDeductibleAmount => amount - deductibleAmount;
+
+  /// Gasto del día a día, sin ninguna parte deducible.
+  bool get isPersonal => deductiblePct == 0;
 
   Map<String, Object?> toMap() => {
     'id': id,

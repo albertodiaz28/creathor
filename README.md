@@ -15,7 +15,7 @@ tonal (superficie crema `#FBF9F6`, primario negro, acento menta `#26E19A`, viole
 
 | Pestaña | Archivo | Qué hace |
 |---|---|---|
-| Finanzas | `lib/screens/finance/dashboard_screen.dart` | Hero con el neto del mes, barra segmentada neto/Hacienda/agencia/gastos, hucha fiscal, pipeline de campañas por estado (pendientes de cobro, en producción, cobradas) con alerta de vencimiento, otros ingresos netos (trabajos fuera de campañas, sin IVA ni IRPF), gastos deducibles con IVA recuperable al 21%, botón de ocultar importes. |
+| Finanzas | `lib/screens/finance/dashboard_screen.dart` | Hero con el neto del mes, barra segmentada neto/Hacienda/agencia/gastos, hucha fiscal, pipeline de campañas por estado (pendientes de cobro, en producción, cobradas) con alerta de vencimiento, otros ingresos netos (trabajos fuera de campañas, sin IVA ni IRPF), gastos profesionales con IVA recuperable al 21% y gastos del día a día (no deducibles), botón de ocultar importes. |
 | Detalle de campaña | `lib/screens/finance/campaign_detail_screen.dart` | Desglose financiero, cambio de estado (producción → facturada → cobrada), checklist de entregables (toca para avanzar el estado, desliza para borrar), hoja de ruta con hitos, contacto y nota de negociación. |
 | Campaña | `lib/screens/campaign/new_campaign_screen.dart` | Formulario con chips de entregables, calculadora en tiempo real con sliders de agencia e IRPF, términos de pago (30/60 días, 50% anticipo), fecha de draft y publicación que generan deadlines automáticamente. |
 | Súper | `lib/screens/grocery/grocery_screen.dart` | Cesta con añadido rápido, selector de supermercado activo, ahorro acumulado frente al más caro, diferencial por producto, gráfica de barras comparando la cesta en cada cadena y editor de precios por supermercado. |
@@ -46,7 +46,9 @@ para el comparador; se pueden añadir más desde la pestaña Súper.
 
 El IVA es del 21% (`lib/core/constants.dart`). Las campañas descuentan IVA y agencia
 del fee bruto. Los ingresos de otros trabajos se guardan ya en neto y se suman
-íntegros al dinero del mes.
+íntegros al dinero del mes. Los gastos se restan enteros del balance; solo su parte
+deducible cuenta para IVA e IRPF. Un gasto con 0% deducible es del día a día
+(comida, casa, ocio). El balance del mes puede quedar en negativo.
 
 **Migraciones.** La versión 2 del esquema añade la tabla `incomes` y borra los datos
 de ejemplo que la versión 1 insertaba al crear la base. Esa migración vacía campañas,

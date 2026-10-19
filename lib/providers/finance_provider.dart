@@ -17,6 +17,7 @@ class MonthSummary {
     required this.agency,
     required this.expenses,
     required this.vatRecoverable,
+    this.personalExpenses = 0,
     this.otherIncome = 0,
   });
 
@@ -24,8 +25,14 @@ class MonthSummary {
   final double gross;
   final double tax;
   final double agency;
+
+  /// Parte deducible de los gastos: la que cuenta para IVA e IRPF.
   final double expenses;
   final double vatRecoverable;
+
+  /// Gastos del día a día y parte no deducible del resto: salen de la hucha
+  /// pero no cuentan para las cuentas fiscales.
+  final double personalExpenses;
 
   /// Ingresos netos de otros trabajos: entran íntegros, sin IVA ni IRPF.
   final double otherIncome;
@@ -33,14 +40,17 @@ class MonthSummary {
   /// Todo lo que entra este mes: bruto de campañas + ingresos netos.
   double get totalIn => gross + otherIncome;
 
-  double get net =>
-      (gross - tax - agency - expenses + otherIncome).clamp(0, double.infinity);
+  /// Todo lo que sale de la cuenta en gastos, deducible o no.
+  double get totalSpent => expenses + personalExpenses;
+
+  /// Balance del mes. Puede ser negativo si se gasta más de lo que entra.
+  double get net => gross - tax - agency - totalSpent + otherIncome;
 
   double _pct(double v) => totalIn == 0 ? 0 : (v / totalIn).clamp(0, 1);
   double get netPct => _pct(net);
   double get taxPct => _pct(tax);
   double get agencyPct => _pct(agency);
-  double get expensesPct => _pct(expenses);
+  double get expensesPct => _pct(totalSpent);
 
   static const empty = MonthSummary(
     gross: 0,
@@ -114,9 +124,10 @@ class FinanceProvider extends ChangeNotifier {
       agency += c.agencyCut;
     }
     final monthExpenses = _expenseList.where((e) => sameMonth(e.date));
-    double exp = 0, vat = 0;
+    double exp = 0, personal = 0, vat = 0;
     for (final e in monthExpenses) {
       exp += e.deductibleAmount;
+      personal += e.nonDeductibleAmount;
       vat += e.recoverableVat;
     }
     final other = _incomeList
@@ -128,6 +139,7 @@ class FinanceProvider extends ChangeNotifier {
       agency: agency,
       expenses: exp,
       vatRecoverable: vat,
+      personalExpenses: personal,
       otherIncome: other,
     );
   }

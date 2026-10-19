@@ -132,6 +132,60 @@ void main() {
       expect(finance.monthSummary.expenses, 121);
     });
 
+    test(
+      'gastos del día a día restan de la hucha pero no son fiscales',
+      () async {
+        final finance = FinanceProvider();
+        await finance.load();
+        await finance.createCampaign(
+          campaign(gross: 1000, agency: 15, tax: 21),
+          const [],
+        );
+        await finance.addExpense(
+          Expense(
+            title: 'Compra semanal',
+            amount: 80,
+            category: ExpenseCategory.food,
+            date: DateTime.now(),
+            deductiblePct: 0,
+          ),
+        );
+        // Luz al 30% por teletrabajo: 30 € deducibles, 70 € personales.
+        await finance.addExpense(
+          Expense(
+            title: 'Luz',
+            amount: 100,
+            category: ExpenseCategory.utilities,
+            date: DateTime.now(),
+            deductiblePct: 30,
+          ),
+        );
+        final s = finance.monthSummary;
+        expect(finance.expenses.any((e) => e.isPersonal), isTrue);
+        expect(s.expenses, 30);
+        expect(s.personalExpenses, 150);
+        expect(s.vatRecoverable, closeTo(30 * 0.21 / 1.21, 0.001));
+        expect(s.tax, 210);
+        // 1000 - 210 - 150 - 180 = 460.
+        expect(s.net, 460);
+      },
+    );
+
+    test('el balance puede quedar en negativo', () async {
+      final finance = FinanceProvider();
+      await finance.load();
+      await finance.addExpense(
+        Expense(
+          title: 'Alquiler',
+          amount: 700,
+          category: ExpenseCategory.home,
+          date: DateTime.now(),
+          deductiblePct: 0,
+        ),
+      );
+      expect(finance.monthSummary.net, -700);
+    });
+
     test('otros ingresos se suman netos, sin IVA, IRPF ni agencia', () async {
       final finance = FinanceProvider();
       await finance.load();

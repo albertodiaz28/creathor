@@ -27,6 +27,7 @@ class _ExpenseFormState extends State<_ExpenseForm> {
   final _title = TextEditingController();
   final _description = TextEditingController();
   final _amount = TextEditingController();
+  bool _personal = false;
   ExpenseCategory _category = ExpenseCategory.software;
   double _deductible = 100;
   bool _receipt = true;
@@ -61,8 +62,8 @@ class _ExpenseFormState extends State<_ExpenseForm> {
         amount: amount,
         category: _category,
         date: _date,
-        deductiblePct: _deductible,
-        hasReceipt: _receipt,
+        deductiblePct: _personal ? 0 : _deductible,
+        hasReceipt: !_personal && _receipt,
       ),
     );
     if (!mounted) return;
@@ -70,9 +71,19 @@ class _ExpenseFormState extends State<_ExpenseForm> {
     showToast(
       context,
       'Gasto guardado',
-      subtitle: 'IVA recuperable actualizado',
+      subtitle: _personal
+          ? '${euro(amount)} descontados de tu hucha'
+          : 'IVA recuperable actualizado',
       emoji: '🧾',
     );
+  }
+
+  void _setPersonal(bool personal) {
+    if (personal == _personal) return;
+    setState(() {
+      _personal = personal;
+      _category = personal ? ExpenseCategory.food : ExpenseCategory.software;
+    });
   }
 
   @override
@@ -92,17 +103,39 @@ class _ExpenseFormState extends State<_ExpenseForm> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Nuevo gasto deducible', style: AppText.headlineMd),
+            Text('Nuevo gasto', style: AppText.headlineMd),
             Text(
-              'Microgastos del estudio: software, luz, fibra, atrezzo…',
+              _personal
+                  ? 'Gasto del día a día: sale de tu hucha, pero no cuenta para IVA ni IRPF.'
+                  : 'Microgastos del estudio: software, luz, fibra, atrezzo…',
               style: AppText.bodySm.copyWith(color: AppColors.outline),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                PillChip(
+                  label: 'Profesional',
+                  icon: Icons.receipt_long_outlined,
+                  selected: !_personal,
+                  onTap: () => _setPersonal(false),
+                ),
+                const SizedBox(width: 8),
+                PillChip(
+                  label: 'Día a día',
+                  icon: Icons.shopping_bag_outlined,
+                  selected: _personal,
+                  onTap: () => _setPersonal(true),
+                ),
+              ],
             ),
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: _title,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                hintText: 'Concepto (ej. Adobe Creative Cloud)',
+              decoration: InputDecoration(
+                hintText: _personal
+                    ? 'Concepto (ej. Compra semanal)'
+                    : 'Concepto (ej. Adobe Creative Cloud)',
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -162,7 +195,7 @@ class _ExpenseFormState extends State<_ExpenseForm> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final c in ExpenseCategory.values)
+                for (final c in ExpenseCategory.forPersonal(_personal))
                   PillChip(
                     label: c.label,
                     icon: c.icon,
@@ -171,55 +204,57 @@ class _ExpenseFormState extends State<_ExpenseForm> {
                   ),
               ],
             ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                Expanded(
-                  child: Text('Parte deducible', style: AppText.titleSm),
-                ),
-                Text('${_deductible.round()}%', style: AppText.numericStat),
-              ],
-            ),
-            Slider(
-              value: _deductible,
-              min: 0,
-              max: 100,
-              divisions: 20,
-              activeColor: AppColors.secondary,
-              onChanged: (v) => setState(() => _deductible = v),
-            ),
-            SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              value: _receipt,
-              activeThumbColor: AppColors.secondary,
-              title: Text('Ticket / factura guardada', style: AppText.bodyMd),
-              onChanged: (v) => setState(() => _receipt = v),
-            ),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.secondaryContainer.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-              ),
-              child: Row(
+            if (!_personal) ...[
+              const SizedBox(height: AppSpacing.md),
+              Row(
                 children: [
-                  const Icon(
-                    Icons.savings_outlined,
-                    color: AppColors.secondary,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      'IVA recuperable estimado: ${euro(vat)}',
-                      style: AppText.labelLg.copyWith(
-                        color: AppColors.onSecondaryContainer,
-                      ),
-                    ),
+                    child: Text('Parte deducible', style: AppText.titleSm),
                   ),
+                  Text('${_deductible.round()}%', style: AppText.numericStat),
                 ],
               ),
-            ),
+              Slider(
+                value: _deductible,
+                min: 0,
+                max: 100,
+                divisions: 20,
+                activeColor: AppColors.secondary,
+                onChanged: (v) => setState(() => _deductible = v),
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _receipt,
+                activeThumbColor: AppColors.secondary,
+                title: Text('Ticket / factura guardada', style: AppText.bodyMd),
+                onChanged: (v) => setState(() => _receipt = v),
+              ),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.secondaryContainer.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.savings_outlined,
+                      color: AppColors.secondary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'IVA recuperable estimado: ${euro(vat)}',
+                        style: AppText.labelLg.copyWith(
+                          color: AppColors.onSecondaryContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: AppSpacing.md),
             PrimaryButton(
               label: 'Guardar gasto',

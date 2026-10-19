@@ -214,7 +214,7 @@ class _HeroBalanceCard extends StatelessWidget {
                   ],
                 ),
                 Text(
-                  'Campañas tras IVA (21%) y agencia, menos gastos, más otros ingresos netos',
+                  'Campañas tras IVA (21%) y agencia, más otros ingresos netos, menos todos tus gastos',
                   style: AppText.bodySm.copyWith(color: AppColors.outline),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -243,6 +243,10 @@ class _HeroBalanceCard extends StatelessWidget {
                     LegendDot(
                       color: AppColors.onTertiaryContainer,
                       label: '${percent(s.agencyPct * 100)} Agencia',
+                    ),
+                    LegendDot(
+                      color: AppColors.outline,
+                      label: '${percent(s.expensesPct * 100)} Gastos',
                     ),
                   ],
                 ),
@@ -285,15 +289,36 @@ class _HeroBalanceCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                SizedBox(
-                  height: 64,
-                  child: _StatTile(
-                    label: 'Otros ingresos netos (sin IVA ni IRPF)',
-                    value: hidden ? '••••' : '+${euroInt(s.otherIncome)}',
-                    icon: Icons.work_outline,
-                    iconColor: AppColors.secondary,
-                    valueColor: AppColors.secondary,
-                  ),
+                Text(
+                  'FUERA DE IVA E IRPF',
+                  style: AppText.labelSm.copyWith(color: AppColors.outline),
+                ),
+                const SizedBox(height: 6),
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 2.2,
+                  children: [
+                    _StatTile(
+                      label: 'Otros ingresos netos',
+                      value: hidden ? '••••' : '+${euroInt(s.otherIncome)}',
+                      icon: Icons.work_outline,
+                      iconColor: AppColors.secondary,
+                      valueColor: AppColors.secondary,
+                    ),
+                    _StatTile(
+                      label: 'Gastos del día a día',
+                      value: hidden
+                          ? '••••'
+                          : '-${euroInt(s.personalExpenses)}',
+                      icon: Icons.shopping_bag_outlined,
+                      iconColor: AppColors.outline,
+                      valueColor: AppColors.onSurfaceVariant,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Container(
@@ -725,8 +750,8 @@ class _ExpensesSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionTitle(
-          title: 'Gastos deducibles',
-          subtitle: 'Desgrava IVA para optimizar tu trimestre',
+          title: 'Gastos',
+          subtitle: 'Profesionales (desgravan IVA) y del día a día',
           trailing: RoundIconButton(
             icon: Icons.add,
             bg: AppColors.surfaceContainerHigh,
@@ -740,7 +765,8 @@ class _ExpensesSection extends StatelessWidget {
           const EmptyState(
             icon: Icons.receipt_long_outlined,
             title: 'Sin gastos este mes',
-            subtitle: 'Añade software, luz, fibra o atrezzo para deducir IVA.',
+            subtitle:
+                'Añade software o atrezzo para deducir IVA, o la compra y el ocio para ver tu hucha real.',
           )
         else
           SurfaceCard(
@@ -767,7 +793,9 @@ class _ExpenseRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final e = expense;
-    final hint = e.deductiblePct < 100
+    final hint = e.isPersonal
+        ? 'Día a día · no deducible'
+        : e.deductiblePct < 100
         ? 'IVA ${euro(e.recoverableVat)} · ${e.deductiblePct.round()}% deducible'
         : e.hasReceipt
         ? 'IVA ${euro(e.recoverableVat)} · Ticket guardado'
@@ -791,7 +819,7 @@ class _ExpenseRow extends StatelessWidget {
       confirmDismiss: (_) => confirmDialog(
         context,
         title: 'Eliminar gasto',
-        message: '¿Quitar "${e.title}" de tus gastos deducibles?',
+        message: '¿Quitar "${e.title}" de tus gastos?',
       ),
       onDismissed: (_) => finance.deleteExpense(e.id!),
       child: Container(
@@ -846,7 +874,9 @@ class _ExpenseRow extends StatelessWidget {
                   Text(
                     hint,
                     style: AppText.labelSm.copyWith(
-                      color: AppColors.secondary,
+                      color: e.isPersonal
+                          ? AppColors.outline
+                          : AppColors.secondary,
                       fontWeight: FontWeight.w500,
                     ),
                     maxLines: 1,
